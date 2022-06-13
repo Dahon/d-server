@@ -1,8 +1,10 @@
 import { Exclude } from 'class-transformer';
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { BaseEntity, Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn } from "typeorm";
+import { DatabaseFileEntity } from "./databaseFile.entity";
+import { DatabaseVideoFileEntity } from "./databaseVideoFile.entity";
 
 @Entity()
-export class User extends BaseEntity {
+export class User {
   @PrimaryGeneratedColumn()
   public id!: number;
 
@@ -18,4 +20,25 @@ export class User extends BaseEntity {
 
   @Column({ type: 'timestamp', nullable: true, default: null })
   public lastLoginAt: Date | null;
+
+  @Column({ nullable: true })
+  public name: string;
+
+  @Column({ nullable: true })
+  public avatarId?: number;
+
+  @JoinColumn({ name: 'avatarId' })
+  @OneToOne(() => DatabaseFileEntity, { nullable: true })
+  public avatar: DatabaseFileEntity;
+
+  @Column({ nullable: true })
+  public videoId?: number;
+
+  @JoinColumn({ name: 'videoId' })
+  @OneToOne(() => DatabaseVideoFileEntity, { nullable: true })
+  public video: DatabaseVideoFileEntity;
+
+
+
+
 }

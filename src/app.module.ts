@@ -7,6 +7,8 @@ import { UserModule } from './user/user.module';
 import { User } from "./user/user.entity";
 import { Profile } from "./user/profile.entity";
 import { Company } from "./user/company.entity";
+import { DatabaseFileEntity } from "./user/databaseFile.entity";
+import { DatabaseVideoFileEntity } from "./user/databaseVideoFile.entity";
 
 @Module({
   imports: [
@@ -21,7 +23,7 @@ import { Company } from "./user/company.entity";
       username: process.env.POSTGRES_USER,
       password: process.env.POSTGRES_PASSWORD,
       database: process.env.POSTGRES_DB,
-      entities: [User, Profile, Company],
+      entities: [User, Profile, Company, DatabaseFileEntity, DatabaseVideoFileEntity],
       migrations: ['dist/src/db/migrations/*.js'],
       synchronize: true,
     }),

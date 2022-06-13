@@ -2,27 +2,27 @@ import { BaseEntity, Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColum
 import { User } from "./user.entity";
 
 @Entity()
-export class Company extends BaseEntity {
+export class Company {
   @PrimaryGeneratedColumn()
-  public id!: number;
+  public id: string;
 
-  @Column({ type: 'varchar', nullable: true })
-  public name: string | null;
+  @Column({ nullable: true })
+  public name: string;
 
-  @Column({ type: 'text', nullable: true })
-  public description: string | null;
+  @Column({ nullable: true })
+  public description: string;
 
   @Column({nullable: true })
-  public education_level: string | null;
+  public education_level: string;
 
   @Column({ nullable: true })
-  public work_location: string | null;
+  public work_location: string;
 
   @Column({ type: 'simple-array', nullable: true })
-  public specializations: string | null[];
+  public specializations: string[];
 
   @Column({ nullable: true })
-  public expected_salary: string | null;
+  public expected_salary: string;
 
   @OneToOne(() => User)
   @JoinColumn()

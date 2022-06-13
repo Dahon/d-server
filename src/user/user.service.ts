@@ -1,10 +1,14 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { getConnection, Repository } from "typeorm";
 import { UpdateNameDto } from "./user.dto";
 import { User } from "./user.entity";
 import { Profile } from "./profile.entity";
 import { Company } from "./company.entity";
+import DatabaseFilesService from "./databaseFilesService";
+import DatabaseVideoFilesService from "./databaseVideoFilesService";
+
+
 
 @Injectable()
 export class UserService {
@@ -17,6 +21,9 @@ export class UserService {
   @InjectRepository(Company)
   private readonly companyRep: Repository<Company>;
 
+  constructor(private readonly databaseFilesService: DatabaseFilesService,
+              private readonly databaseVideoFilesService: DatabaseVideoFilesService) {
+  }
   public async updateName(body: UpdateNameDto, req: any): Promise<User> {
     const user: User = <User>req.user;
     // user.name = body.name;
@@ -24,9 +31,76 @@ export class UserService {
     return this.repository.save(user);
   }
 
+  async addVideo(userId: number, imageBuffer: Buffer, filename: string) {
+    const connection = getConnection();
+    const queryRunner = connection.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      const user = await queryRunner.manager.findOne(User, { where: {id: userId} });
+      const currentAvatarId = user.videoId;
+      const video = await this.databaseVideoFilesService.uploadDatabaseFileWithQueryRunner(imageBuffer, filename, queryRunner);
+
+      await queryRunner.manager.update(User, userId, {
+        videoId: video.id
+      });
+
+      if (currentAvatarId) {
+        await this.databaseVideoFilesService.deleteFileWithQueryRunner(currentAvatarId, queryRunner);
+      }
+
+      await queryRunner.commitTransaction();
+
+      return video;
+    } catch {
+      await queryRunner.rollbackTransaction();
+      throw new InternalServerErrorException();
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async addAvatar(userId: number, imageBuffer: Buffer, filename: string) {
+    const connection = getConnection();
+    const queryRunner = connection.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      const user = await queryRunner.manager.findOne(User, { where: {id: userId} });
+      const currentAvatarId = user.avatarId;
+      const avatar = await this.databaseFilesService.uploadDatabaseFileWithQueryRunner(imageBuffer, filename, queryRunner);
+
+      await queryRunner.manager.update(User, userId, {
+        avatarId: avatar.id
+      });
+
+      if (currentAvatarId) {
+        await this.databaseFilesService.deleteFileWithQueryRunner(currentAvatarId, queryRunner);
+      }
+
+      await queryRunner.commitTransaction();
+
+      return avatar;
+    } catch {
+      await queryRunner.rollbackTransaction();
+      throw new InternalServerErrorException();
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  public async getUserByIds(userId: any) {
+    return await this.repository.findOneBy({id: userId});
+  }
+
   public async storeProfile(body: any, req: any) {
     const user: User = await this.repository.findOneBy({id: body.id});
-    const profile = await this.profileRep.findOneBy({id: body.id});
+    const profile = await this.profileRep.createQueryBuilder("profile")
+      .innerJoinAndSelect("profile.user", "user")
+      .where("user.id = :id", { id: body.id })
+      .getOne();
     if (!profile) {
       const profile: Profile = new Profile();
     }
@@ -45,7 +119,11 @@ export class UserService {
 
   public async storeCompany(body: any, req: any) {
     const user: User = await this.repository.findOneBy({id: body.id});
-    const company = await this.companyRep.findOneBy({id: body.id});
+    const company = await this.companyRep.createQueryBuilder("company")
+      .innerJoinAndSelect("company.user", "user")
+      .where("user.id = :id", { id: body.id })
+      .getOne();
+    console.log('comp', company);
     if (!company) {
       const company: Company = new Company();
     }
@@ -72,7 +150,8 @@ export class UserService {
       .getMany();
   }
 
-  public async getCompanies(): Promise<Company[]> {
+  public async getCompanies() {
+    console.log('123123');
     return await this.companyRep.find({ relations: ['user'] });
   }
 
@@ -87,7 +166,12 @@ export class UserService {
   }
 
   public async getProfileById(id) {
-    return await this.profileRep.findOneBy({user: {id}});
+    console.log('id', id);
+    return await this.profileRep.createQueryBuilder("profile")
+      .innerJoinAndSelect("profile.user", "user")
+      .where("user.id = :id", { id })
+      .getOne()
+    // return await this.profileRep.findOneBy({loadRelationIds: true, where: {user: {id} }, relations: ['user']});
   }
 
   public async getCompanyById(id) {

@@ -6,7 +6,7 @@ import {
   UseInterceptors,
   Put,
   Body,
-  Inject, Get, Query, Param, Post
+  Inject, Get, Query, Param, Post, UploadedFile
 } from "@nestjs/common";
 import { Request } from 'express';
 import { UpdateNameDto } from './user.dto';
@@ -15,6 +15,7 @@ import { UserService } from './user.service';
 import { JwtAuthGuard } from './auth/auth.guard';
 import { Profile } from "./profile.entity";
 import { Company } from "./company.entity";
+import { FileInterceptor } from "@nestjs/platform-express";
 
 @Controller('user')
 export class UserController {
@@ -43,15 +44,21 @@ export class UserController {
     return this.service.storeProfile(body, req);
   }
 
+  @Get('/:id')
+  private getUserById(@Param('id') id): Promise<User> {
+    return this.service.getUserByIds(id);
+  }
+
   @Get('profile/:id')
   private getProfileById(@Param('id') id): Promise<Profile> {
     return this.service.getProfileById(id);
   }
 
-  @Get('companies')
-  private getCompanies(): Promise<Company[]> {
-    return this.service.getCompanies();
-  }
+  // @Get('companies')
+  // private getCompanies() {
+  //   console.log('test');
+  //   return this.service.getCompanies();
+  // }
 
   @Get('company/:id')
   private getCompanyById(@Param('id') id): Promise<Company> {
@@ -61,6 +68,20 @@ export class UserController {
   @Post('company')
   private storeCompany(@Body() body: any, @Req() req: Request) {
     return this.service.storeCompany(body, req);
+  }
+
+  @Post('avatar/:id')
+  @UseInterceptors(FileInterceptor('file'))
+  async addAvatar(@Param('id') id, @UploadedFile() file: any) {
+    console.log('file', file);
+    return this.service.addAvatar(id, file.buffer, file.originalname);
+  }
+
+  @Post('video/:id')
+  @UseInterceptors(FileInterceptor('video/webm'))
+  async addVideo(@Param('id') id, @UploadedFile() file: any) {
+    console.log('file', file);
+    return this.service.addVideo(id, file.buffer, file.originalname);
   }
 
   @Get('profile/search')
